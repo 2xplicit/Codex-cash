@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Codex Naira Multiplier — Receipt Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      /* Print only the receipt card */
+      body * { visibility: hidden !important; }
+      #receipt, #receipt * { visibility: visible !important; }
+      #receipt { position: fixed; inset: 0; margin: auto; box-shadow: none !important; }
+      .no-print { display: none !important; }
+    }
+    /* Simple number spinner removal for type=number (cross-browser) */
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-fuchsia-800 text-slate-100 antialiased">
+  <div class="max-w-5xl mx-auto px-6 py-12">
+    <header class="text-center mb-10">
+      <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur rounded-full px-5 py-2">
+        <span class="text-2xl">🎉</span>
+        <span class="uppercase tracking-widest text-fuchsia-200 text-xs">Codex Calculator</span>
+      </div>
+      <h1 class="mt-4 text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight">
+        Naira Multiplier Results with a Receipt Pop‑up
+      </h1>
+      <p class="mt-3 text-fuchsia-100/80">Enter your details, hit “Codex”, and get a beautiful printable receipt.</p>
+    </header>
+
+    <main>
+      <section class="bg-white/10 backdrop-blur rounded-2xl p-6 sm:p-8 shadow-2xl ring-1 ring-white/10">
+        <form id="codexForm" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Name -->
+          <div>
+            <label for="name" class="block text-sm font-medium text-fuchsia-100 mb-2">Name</label>
+            <input id="name" name="name" type="text" placeholder="e.g., Ada Lovelace"
+              class="w-full rounded-xl bg-white/90 text-slate-900 placeholder-slate-500 px-4 py-3 outline-none focus:ring-4 ring-fuchsia-300 transition">
+          </div>
+
+          <!-- Six Digit Code -->
+          <div>
+            <label for="code" class="block text-sm font-medium text-fuchsia-100 mb-2">Six Digit Code</label>
+            <input id="code" name="code" type="text" inputmode="numeric" maxlength="6" placeholder="e.g., 123456"
+              class="w-full rounded-xl bg-white/90 text-slate-900 placeholder-slate-500 px-4 py-3 outline-none focus:ring-4 ring-fuchsia-300 transition">
+            <p id="codeHelp" class="mt-1 text-xs text-fuchsia-200/80">Exactly 6 digits.</p>
+          </div>
+
+          <!-- Amount in Naira -->
+          <div>
+            <label for="amount" class="block text-sm font-medium text-fuchsia-100 mb-2">Amount in Naira</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">₦</span>
+              <input id="amount" name="amount" type="number" min="0" step="0.01" placeholder="e.g., 25000"
+                class="w-full pl-8 rounded-xl bg-white/90 text-slate-900 placeholder-slate-500 px-4 py-3 outline-none focus:ring-4 ring-fuchsia-300 transition">
+            </div>
+          </div>
+
+          <!-- Multiplier -->
+          <div>
+            <label for="multiplier" class="block text-sm font-medium text-fuchsia-100 mb-2">Multiplier (e.g., 25×)</label>
+            <input id="multiplier" name="multiplier" type="text" placeholder="e.g., 25× or 25x or 25"
+              class="w-full rounded-xl bg-white/90 text-slate-900 placeholder-slate-500 px-4 py-3 outline-none focus:ring-4 ring-fuchsia-300 transition">
+            <p class="mt-1 text-xs text-fuchsia-200/80">We’ll read numbers with or without ×/x.</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="md:col-span-2 flex flex-wrap items-center gap-3 pt-2">
+            <button id="codexBtn" type="button"
+              class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-600 active:bg-fuchsia-700 text-white font-semibold shadow-lg shadow-fuchsia-900/30 focus:outline-none focus:ring-4 ring-fuchsia-300 transition">
+              <span>⚡</span><span>Codex</span>
+            </button>
+            <button id="resetBtn" type="reset"
+              class="px-5 py-3 rounded-xl bg-white/20 hover:bg-white/25 text-fuchsia-100 font-medium focus:outline-none focus:ring-4 ring-white/20 transition">
+              Reset
+            </button>
+            <p id="errorMsg" class="text-rose-200 text-sm font-medium"></p>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div id="modal" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
+    <!-- Receipt Card -->
+    <div id="receipt" class="relative z-10 w-[92%] max-w-md bg-white text-slate-800 rounded-2xl shadow-2xl">
+      <!-- Top accent -->
+      <div class="h-2 w-full bg-gradient-to-r from-fuchsia-500 via-purple-500 to-indigo-500 rounded-t-2xl"></div>
+
+      <div class="p-6">
+        <!-- Badge -->
+        <div class="flex items-center justify-center mb-4">
+          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span>🎉</span>
+            <span class="text-xs tracking-wide uppercase font-bold">Congratulations, you won!</span>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div class="text-center mb-5">
+          <h2 class="text-xl font-extrabold tracking-tight text-slate-900">Winning Receipt</h2>
+          <p class="text-xs text-slate-500">Reference generated by Codex</p>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-dashed border-slate-300 my-4"></div>
+
+        <!-- Details -->
+        <dl class="grid grid-cols-1 gap-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Date & Time</dt>
+            <dd id="rDate" class="font-semibold text-slate-900">—</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Name</dt>
+            <dd id="rName" class="font-semibold text-slate-900">—</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Six Digit Code</dt>
+            <dd id="rCode" class="font-semibold tracking-widest text-slate-900">—</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Multiplier</dt>
+            <dd id="rMult" class="font-semibold text-slate-900">—</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Amount Invested</dt>
+            <dd id="rAmt" class="font-semibold text-slate-900">—</dd>
+          </div>
+        </dl>
+
+        <!-- Divider -->
+        <div class="border-t border-dashed border-slate-300 my-4"></div>
+
+        <!-- Final Amount -->
+        <div class="text-center">
+          <div class="text-xs uppercase tracking-wider text-slate-500">Final Amount in Naira</div>
+          <div id="rFinal" class="mt-1 text-3xl font-black text-slate-900">₦0.00</div>
+        </div>
+
+        <!-- Optional: Mini Breakdown (subtle) -->
+        <details class="mt-4 group">
+          <summary class="cursor-pointer select-none text-xs text-slate-500 hover:text-slate-700 transition">
+            for more info visit our telegram group
+          </summary>
+          <div class="mt-2 text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+            <p><span class="font-semibold">Rule used:</span> Final = (Multiplier² ÷ 100) × Amount + Multiplier + Amount</p>
+            <p id="rStep1" class="text-slate-700">—</p>
+            <p id="rStep2" class="text-slate-700">—</p>
+            <p id="rStep3" class="text-slate-700">—</p>
+            <p id="rStep4" class="text-slate-700">—</p>
+          </div>
+        </details>
+
+        <!-- Divider -->
+        <div class="border-t border-dashed border-slate-300 my-5"></div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-between gap-3">
+          <button id="printBtn" class="no-print w-1/2 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 active:bg-slate-950 transition">
+            🖨️ Print
+          </button>
+          <button id="backBtn" class="no-print w-1/2 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-200 text-slate-900 font-semibold hover:bg-slate-300 active:bg-slate-400 transition">
+            ⬅️ Back
+          </button>
+        </div>
+
+        <!-- Footer note -->
+        <p class="mt-4 text-center text-[10px] text-slate-400">
+          This is a demo receipt for personal use only.
+        </p>
+      </div>
+
+      <!-- Bottom accent -->
+      <div class="h-2 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 rounded-b-2xl"></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+
+    const nameEl = $("#name");
+    const codeEl = $("#code");
+    const amountEl = $("#amount");
+    const multEl = $("#multiplier");
+    const errorMsg = $("#errorMsg");
+
+    const codexBtn = $("#codexBtn");
+    const resetBtn = $("#resetBtn");
+
+    const modal = $("#modal");
+    const backBtn = $("#backBtn");
+    const printBtn = $("#printBtn");
+
+    const rName = $("#rName");
+    const rCode = $("#rCode");
+    const rMult = $("#rMult");
+    const rAmt  = $("#rAmt");
+    const rFinal= $("#rFinal");
+    const rDate = $("#rDate");
+
+    const rStep1 = $("#rStep1");
+    const rStep2 = $("#rStep2");
+    const rStep3 = $("#rStep3");
+    const rStep4 = $("#rStep4");
+
+    const ngn = new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" });
+
+    function parseMultiplier(raw) {
+      if (!raw) return NaN;
+      const cleaned = String(raw).trim().replace(/×/g, "x").replace(/\s+/g, "");
+      // Remove trailing or leading x
+      const numeric = cleaned.replace(/x$/i, "").replace(/^x/i, "");
+      return Number(numeric);
+    }
+
+    function validate() {
+      errorMsg.textContent = "";
+
+      const name = nameEl.value.trim();
+      const code = codeEl.value.trim();
+      const amount = Number(amountEl.value);
+      const m = parseMultiplier(multEl.value);
+
+      if (!name) return "Please enter a name.";
+      if (!/^\d{6}$/.test(code)) return "Please enter exactly six digits for the code.";
+      if (!isFinite(amount) || amount <= 0) return "Please enter a valid amount greater than 0.";
+      if (!isFinite(m) || m <= 0) return "Please enter a valid multiplier (e.g., 25×, 25x or 25).";
+      return null;
+    }
+
+    function compute(amount, m) {
+      // Following the described steps:
+      // (multiplier) = 100%
+      // (multiplier)/100% = resultOnMultiplier
+      const resultOnMultiplier = m / 100;
+      // (resultOnMultiplier) × (multiplier) = result2OnMultiplier
+      const result2OnMultiplier = resultOnMultiplier * m; // m^2 / 100
+      // (result2OnMultiplier) × (amount) = resultAmount
+      const resultAmount = result2OnMultiplier * amount;
+      // (resultAmount) + (multiplier) = resultAmount2
+      const resultAmount2 = resultAmount + m;
+      // (resultAmount2) + (amount) = finalAmount
+      const finalAmount = resultAmount2 + amount;
+
+      return {
+        resultOnMultiplier,
+        result2OnMultiplier,
+        resultAmount,
+        resultAmount2,
+        finalAmount
+      };
+    }
+
+    function openModal() {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      // Prevent background scroll
+      document.body.style.overflow = "hidden";
+    }
+    function closeModal() {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      document.body.style.overflow = "";
+    }
+
+    codexBtn.addEventListener("click", () => {
+      const v = validate();
+      if (v) {
+        errorMsg.textContent = v;
+        return;
+      }
+
+      const name = nameEl.value.trim();
+      const code = codeEl.value.trim();
+      const amount = Number(amountEl.value);
+      const m = parseMultiplier(multEl.value);
+
+      const {
+        resultOnMultiplier,
+        result2OnMultiplier,
+        resultAmount,
+        resultAmount2,
+        finalAmount
+      } = compute(amount, m);
+
+      // Fill receipt fields
+      const now = new Date();
+      const dateText = now.toLocaleString('en-NG', {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: true,
+        timeZoneName: 'short'
+      });
+      rDate.textContent = dateText;
+
+      rName.textContent = name;
+      rCode.textContent = code;
+      rMult.textContent = `${m}×`;
+      rAmt.textContent  = ngn.format(amount);
+      rFinal.textContent = ngn.format(finalAmount);
+
+      // Mini breakdown (rounded for readability)
+      const round2 = (x) => Math.round((x + Number.EPSILON) * 100) / 100;
+      rStep1.textContent = `(Multiplier)/100% = ${m} ÷ 100 = ${round2(resultOnMultiplier)}`;
+      rStep2.textContent = `(Result on Multiplier) × (Multiplier) = ${round2(resultOnMultiplier)} × ${m} = ${round2(result2OnMultiplier)}`;
+      rStep3.textContent = `(Result 2 on Multiplier) × (Amount) = ${round2(result2OnMultiplier)} × ${ngn.format(amount)} = ${ngn.format(resultAmount)}`;
+      rStep4.textContent = `Then + Multiplier + Amount = ${ngn.format(resultAmount)} + ${m} + ${ngn.format(amount)} = ${ngn.format(finalAmount)}`;
+
+      openModal();
+    });
+
+    backBtn.addEventListener("click", closeModal);
+    printBtn.addEventListener("click", () => window.print());
+
+    // Close modal when clicking outside the receipt
+    modal.addEventListener("click", (e) => {
+      const receipt = document.getElementById("receipt");
+      if (!receipt.contains(e.target)) closeModal();
+    });
+
+    // Small UX: keep code as digits only and max 6
+    codeEl.addEventListener("input", () => {
+      codeEl.value = codeEl.value.replace(/\D/g, "").slice(0, 6);
+    });
+
+    // Reset message on form reset
+    resetBtn.addEventListener("click", () => {
+      errorMsg.textContent = "";
+    });
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98179bbe97d0f533',t:'MTc1ODI2OTQ0NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
